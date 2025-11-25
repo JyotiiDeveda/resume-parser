@@ -1,9 +1,8 @@
 const cron = require('node-cron');
-const { subDays, subHours, subMinutes } = require('date-fns');
+const { subDays } = require('date-fns');
 const resumeService = require('../services/resume.service');
-const jobDescriptionService = require('../services/jobDescription.service');
 
-const readDriveAndGenerateResumeSummary = function () {
+const parseResumeAndGenerateSummary = function () {
   const scheduleExpression = process.env.POLLING_SCHEDULER_TIME;
   console.log('scheduleExpression: ', scheduleExpression);
 
@@ -15,14 +14,13 @@ const readDriveAndGenerateResumeSummary = function () {
   cron.schedule(
     scheduleExpression,
     async () => {
-      const jobLabel = 'readDriveAndGenerateResumeSummary';
+      const jobLabel = 'parseResumeAndGenerateSummary';
       try {
         console.log(`[${jobLabel}] started at ${new Date().toISOString()}`);
         const now = new Date();
         const timeBefore = subDays(now, 1).toISOString(); // subtract 5 days
 
-        await jobDescriptionService.parseJDAndSaveEmbeddings(timeBefore);
-        await resumeService.parseResumesAndGenerateSummary(timeBefore);
+        await resumeService.parseResumeAndGenerateSummary(process.env.RESUME_FOLDER_ID, timeBefore);
         console.log(`[${jobLabel}] completed at ${new Date().toISOString()}`);
       } catch (error) {
         console.log(`[${jobLabel}] failed: ${error.message}`, {
@@ -37,5 +35,5 @@ const readDriveAndGenerateResumeSummary = function () {
 };
 
 module.exports = {
-  readDriveAndGenerateResumeSummary
+  parseResumeAndGenerateSummary
 };

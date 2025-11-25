@@ -4,8 +4,8 @@ const prompts = require('../constants/prompts.constant');
 const { JobDescription } = require('../models');
 const { processInBatchesWithLimit } = require('../helpers/commonFunctions.helper');
 
-const parseJDAndSaveEmbeddings = async function (timeBefore) {
-  const files = await driveService.readDrive(process.env.JD_FOLDER_ID, timeBefore);
+const parseJDAndSaveEmbeddings = async function (folderId, timeBefore) {
+  const files = await driveService.readDrive(folderId, timeBefore);
   await processInBatchesWithLimit(
     files,
     async file => {

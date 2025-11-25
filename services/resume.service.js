@@ -1,11 +1,13 @@
+const { sequelize } = require('../models');
+const { QueryTypes } = require('sequelize');
+const mimeTypeConstants = require('../constants/mimetypes.constant');
 const ollamaService = require('./ollama.service');
 const driveService = require('./drive.service');
 const prompts = require('../constants/prompts.constant');
 const commonFunctionsHelper = require('../helpers/commonFunctions.helper');
-const { sequelize } = require('../models');
-const { QueryTypes } = require('sequelize');
+const geminiService = require('./gemini.service');
 
-const getSeneorityLevel = async experienceYears => {
+const getSeneorityLevel = async function (experienceYears) {
   switch (true) {
     case experienceYears >= 7:
       return 'Lead';
@@ -21,7 +23,7 @@ const getSeneorityLevel = async experienceYears => {
   }
 };
 
-async function getResumeJDVectorMetrics(resumeVec) {
+const getResumeJDVectorMetrics = async function (resumeVec) {
   const query = `
     SELECT
       jd.id,
@@ -39,7 +41,7 @@ async function getResumeJDVectorMetrics(resumeVec) {
   });
 
   return results;
-}
+};
 
 const calculateMatchingScore = async function (resumeVec) {
   const dbMetrics = await getResumeJDVectorMetrics(resumeVec);
@@ -63,8 +65,8 @@ const calculateMatchingScore = async function (resumeVec) {
   return results;
 };
 
-const parseResumesAndGenerateSummary = async function (timeBefore) {
-  const files = await driveService.readDrive(process.env.RESUME_FOLDER_ID, timeBefore);
+const parseResumesAndGenerateMatchingScore = async function (folderId, timeBefore) {
+  const files = await driveService.readDrive(folderId, timeBefore);
 
   await commonFunctionsHelper.processInBatchesWithLimit(
     files,
@@ -83,15 +85,15 @@ const parseResumesAndGenerateSummary = async function (timeBefore) {
 
         const jdMatches = await calculateMatchingScore(resumeEmbedding);
 
-        const buffer = driveService.generateSummaryXlsxBuffer({
+        const buffer = driveService.generateXlsxBuffer({
           fullName: resumeExtract.full_name,
           experienceYears: resumeExtract.experience_years,
           seniority: seniorityLevel,
           jdMatches
         });
 
-        const fileName = `${resumeExtract.full_name.replace(/\s+/g, '_')}_summary.xlsx`;
-        await driveService.uploadXlsxToDrive(buffer, fileName, process.env.RP_SUMMARY_FOLDER_ID);
+        const fileName = `${resumeExtract.full_name.replace(/\s+/g, '_')}_matching_score.xlsx`;
+        await driveService.uploadFileToDrive(buffer, fileName, process.env.RP_SUMMARY_FOLDER_ID, mimeTypeConstants.GOOGLE_SHEET_MIME);
       } catch (err) {
         console.error('Failed to parse resume: ', file.name, err);
       }
@@ -100,7 +102,38 @@ const parseResumesAndGenerateSummary = async function (timeBefore) {
   );
 };
 
+const parseResumeAndGenerateSummary = async function (folderId, timeBefore) {
+  const files = await driveService.readDrive(folderId, timeBefore);
+
+  await commonFunctionsHelper.processInBatchesWithLimit(
+    files,
+    async file => {
+      try {
+        const resumeText = await driveService.downloadAndExtractContent(file);
+        const resumeExtractPrompt = prompts.summarizeResumePrompt(resumeText);
+        const resumeExtract = await geminiService.extractInfo(resumeExtractPrompt);
+
+        const workExperience = await geminiService.extractResumeWorkExperience(resumeExtract?.work_experience);
+
+        const buffer = await driveService.generateDocument({
+          full_name: resumeExtract.full_name,
+          education: resumeExtract.education,
+          skills: resumeExtract.skills,
+          ...workExperience
+        });
+        const fileName = `${resumeExtract.full_name.replace(/\s+/g, '_')}_summary.docx`;
+
+        await driveService.uploadFileToDrive(buffer, fileName, process.env.RP_SUMMARY_FOLDER_ID, mimeTypeConstants.DOCX_MIME);
+      } catch (error) {
+        console.error('Error summarizing resumes:', error);
+      }
+    },
+    5
+  );
+};
+
 module.exports = {
-  parseResumesAndGenerateSummary,
-  calculateMatchingScore
+  parseResumesAndGenerateMatchingScore,
+  calculateMatchingScore,
+  parseResumeAndGenerateSummary
 };

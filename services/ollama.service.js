@@ -1,4 +1,5 @@
 const axios = require('axios');
+const mimetypesConstant = require('../constants/mimetypes.constant');
 
 const generateEmbedding = async function (text) {
   let MAX_RETRIES = 10;
@@ -25,7 +26,8 @@ const extractInfo = async function (text) {
   const res = await axios.post(`${process.env.OLLAMA_HOST_URL}/generate`, {
     model: 'llama3',
     prompt: text,
-    stream: false
+    stream: false,
+    format: mimetypesConstant.MODEL_RESPONSE_MIME_TYPE
   });
 
   const raw = res.data?.response?.trim();
