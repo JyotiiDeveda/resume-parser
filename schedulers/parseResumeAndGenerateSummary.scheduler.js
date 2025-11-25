@@ -18,7 +18,7 @@ const parseResumeAndGenerateSummary = function () {
       try {
         console.log(`[${jobLabel}] started at ${new Date().toISOString()}`);
         const now = new Date();
-        const timeBefore = subDays(now, 1).toISOString(); // subtract 5 days
+        const timeBefore = subDays(now, 1).toISOString();
 
         await resumeService.parseResumeAndGenerateSummary(process.env.RESUME_FOLDER_ID, timeBefore);
         console.log(`[${jobLabel}] completed at ${new Date().toISOString()}`);

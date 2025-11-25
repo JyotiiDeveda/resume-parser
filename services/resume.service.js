@@ -3,6 +3,7 @@ const { QueryTypes } = require('sequelize');
 const mimeTypeConstants = require('../constants/mimetypes.constant');
 const ollamaService = require('./ollama.service');
 const driveService = require('./drive.service');
+const filesHelper = require('../helpers/files.helper');
 const prompts = require('../constants/prompts.constant');
 const commonFunctionsHelper = require('../helpers/commonFunctions.helper');
 const geminiService = require('./gemini.service');
@@ -85,7 +86,7 @@ const parseResumesAndGenerateMatchingScore = async function (folderId, timeBefor
 
         const jdMatches = await calculateMatchingScore(resumeEmbedding);
 
-        const buffer = driveService.generateXlsxBuffer({
+        const buffer = filesHelper.generateXlsxBuffer({
           fullName: resumeExtract.full_name,
           experienceYears: resumeExtract.experience_years,
           seniority: seniorityLevel,
@@ -115,7 +116,7 @@ const parseResumeAndGenerateSummary = async function (folderId, timeBefore) {
 
         const workExperience = await geminiService.extractResumeWorkExperience(resumeExtract?.work_experience);
 
-        const buffer = await driveService.generateDocument({
+        const buffer = await filesHelper.generateDocument({
           full_name: resumeExtract.full_name,
           education: resumeExtract.education,
           skills: resumeExtract.skills,

@@ -19,7 +19,7 @@ const generateJDResumeMatchingScore = function () {
       try {
         console.log(`[${jobLabel}] started at ${new Date().toISOString()}`);
         const now = new Date();
-        const timeBefore = subDays(now, 1).toISOString(); // subtract 5 days
+        const timeBefore = subDays(now, 1).toISOString();
 
         await jobDescriptionService.parseJDAndSaveEmbeddings(process.env.JD_FOLDER_ID, timeBefore);
         await resumeService.parseResumesAndGenerateMatchingScore(process.env.RESUME_FOLDER_ID, timeBefore);
